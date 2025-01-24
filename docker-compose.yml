@@ -1,0 +1,102 @@
+services:
+  mariadb:
+    image: mariadb:11.4.2
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+      MARIADB_AUTO_UPGRADE: "1"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      - private
+
+  phpmyadmin:
+    image: phpmyadmin:5.2.1
+    depends_on:
+      - mariadb
+    environment:
+      PMA_HOST: mariadb
+      MYSQL_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+    networks:
+      - private
+
+  mongodb:
+    image: mongo:7.0.11
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_ROOT_PASSWORD}
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - private
+    ports:
+      - "27017:27017"
+
+  rabbitmq:
+    image: rabbitmq:3.13.3-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS:  ${RABBITMQ_DEFAULT_PASSWORD}
+    networks:
+      - private
+
+  metabase:
+    image: metabase/metabase:v0.50.7
+    depends_on:
+      - mariadb
+    environment:
+      TZ: "Europe/Paris"
+      JAVA_TIMEZONE: Europe/Paris
+      MB_DB_TYPE: mysql
+      MB_DB_DBNAME: ${METABASE_DB_NAME}
+      MB_DB_HOST: mariadb
+      MB_DB_PORT: 3306
+      MB_DB_USER: ${METABASE_DB_USERNAME}
+      MB_DB_PASS: ${METABASE_DB_PASSWORD}
+      MB_EMAIL_FROM_ADDRESS: ${METABASE_EMAIL_FROM_ADDRESS}
+      MB_EMAIL_FROM_NAME: ${METABASE_EMAIL_FROM_NAME}
+      MB_EMAIL_SMTP_HOST: ${METABASE_EMAIL_SMTP_HOST}
+      MB_EMAIL_SMTP_PORT: ${METABASE_EMAIL_SMTP_PORT}
+      MB_EMAIL_SMTP_SECURITY: ${METABASE_EMAIL_SMTP_SECURITY}
+      MB_EMAIL_SMTP_USERNAME: ${METABASE_EMAIL_SMTP_USERNAME}
+      MB_EMAIL_SMTP_PASSWORD: ${METABASE_EMAIL_SMTP_PASSWORD}
+    networks:
+      - private
+
+  traefik:
+    image: traefik:v3.0.3
+    environment:
+      TZ: "Europe/Paris"
+      TRAEFIK_ENTRYPOINTS_WEB: "true"
+      TRAEFIK_ENTRYPOINTS_WEB_ADDRESS: ":80"
+      TRAEFIK_ENTRYPOINTS_METRICS: "true"
+      TRAEFIK_ENTRYPOINTS_METRICS_ADDRESS: ":8082"
+      TRAEFIK_ACCESSLOG: "true"
+      TRAEFIK_ACCESSLOG_FILEPATH: "/var/log/traefik/access_logs.log"
+      TRAEFIK_ACCESSLOG_FORMAT: "json"
+      TRAEFIK_ACCESSLOG_BUFFERINGSIZE: 10
+      TRAEFIK_ACCESSLOG_FIELDS_DEFAULTMODE: "keep"
+      TRAEFIK_ACCESSLOG_FIELDS_HEADERS_DEFAULTMODE: "keep"
+      TRAEFIK_ACCESSLOG_FIELDS_HEADERS_NAMES_StartUTC: "drop"
+      TRAEFIK_METRICS_PROMETHEUS: "true"
+      TRAEFIK_METRICS_PROMETHEUS_ADDENTRYPOINTSLABELS: "true"
+      TRAEFIK_METRICS_PROMETHEUS_ADDROUTERSLABELS: "true"
+      TRAEFIK_METRICS_PROMETHEUS_ADDSERVICESLABELS: "true"
+      TRAEFIK_METRICS_PROMETHEUS_ENTRYPOINT: "metrics"
+      TRAEFIK_PROVIDERS_SWARM_ENDPOINT: "unix:///var/run/docker.sock"
+      TRAEFIK_PROVIDERS_SWARM_EXPOSEDBYDEFAULT: "false"
+      TRAEFIK_PROVIDERS_SWARM_NETWORK: stack_public
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_logs:/var/log/traefik/
+    networks:
+      - private
+      - public
+
+volumes:
+  mariadb_data:
+  mongodb_data:
+  traefik_logs:
+
+networks:
+  public:
+  private:

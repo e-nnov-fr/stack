@@ -1,0 +1,59 @@
+services:
+  mariadb:
+    deploy:
+        placement:
+            constraints:
+                - node.role == manager
+
+  mongodb:
+    deploy:
+        placement:
+            constraints:
+                - node.role == manager
+
+  traefik:
+    environment:
+      # TRAEFIK_LOG_LEVEL: DEBUG
+      # TRAEFIK_API_INSECURE: "true"
+
+      TRAEFIK_ENTRYPOINTS_WEB_HTTP_REDIRECTIONS_ENTRYPOINT_TO: "websecure"
+      TRAEFIK_ENTRYPOINTS_WEB_HTTP_REDIRECTIONS_ENTRYPOINT_SCHEME: "https"
+
+      TRAEFIK_ENTRYPOINTS_WEBSECURE: "true"
+      TRAEFIK_ENTRYPOINTS_WEBSECURE_ADDRESS: ":443"
+      TRAEFIK_ENTRYPOINTS_WEBSECURE_HTTP_TLS_CERTRESOLVER: "letsencrypt"
+
+      TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT: "true"
+      TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_STORAGE: "/letsencrypt/acme.json"
+      TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_EMAIL: ${ACME_EMAIL}
+      TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_HTTPCHALLENGE: "true"
+      TRAEFIK_CERTIFICATESRESOLVERS_LETSENCRYPT_ACME_HTTPCHALLENGE_ENTRYPOINT: "web"
+    volumes:
+      - traefik_letsencrypt:/letsencrypt
+    ports:
+      - "80:80"
+      - "443:443"
+      # - "8080:8080" #WebUI
+    deploy:
+        placement:
+            constraints:
+                - node.role == manager
+
+  phpmyadmin:
+    deploy:
+      labels:
+        traefik.enable: "true"
+        traefik.http.routers.phpmyadmin.rule: Host(`phpmyadmin.e-nnov.fr`)
+        traefik.http.routers.phpmyadmin.entrypoints: websecure
+        traefik.http.services.phpmyadmin.loadbalancer.server.port: 80
+
+  metabase:
+    deploy:
+      labels:
+        traefik.enable: "true"
+        traefik.http.routers.metabase.rule: Host(`metabase.e-nnov.fr`) || Host(`metabase.hexaom.e-nnov.fr`)
+        traefik.http.routers.metabase.entrypoints: websecure
+        traefik.http.services.metabase.loadbalancer.server.port: 3000
+    
+volumes:
+  traefik_letsencrypt:

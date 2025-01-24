@@ -1,0 +1,33 @@
+services:
+  mariadb:
+    ports:
+      - "3306:3306"
+
+  rabbitmq:
+    ports:
+      - "5672:5672"
+
+  traefik:
+    environment:
+      TRAEFIK_LOG_LEVEL: DEBUG
+      TRAEFIK_API_INSECURE: "true"
+    ports:
+      - "80:80"
+      - "8080:8080" #WebUI
+
+  phpmyadmin:
+    deploy:
+      labels:
+        traefik.enable: "true"
+        traefik.http.routers.phpmyadmin.rule: Host(`phpmyadmin.e-nnov.fr.localhost`)
+        traefik.http.routers.phpmyadmin.entrypoints: web
+        traefik.http.services.phpmyadmin.loadbalancer.server.port: 80
+
+  # metabase:
+  #   deploy:
+  #     replicas: 1
+  #     labels:
+  #       traefik.enable: "true"
+  #       traefik.http.routers.metabase.rule: Host(`metabase.e-nnov.fr.localhost`)
+  #       traefik.http.routers.metabase.entrypoints: web
+  #       traefik.http.services.metabase.loadbalancer.server.port: 3000
